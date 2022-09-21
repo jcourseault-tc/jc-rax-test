@@ -15,7 +15,6 @@ phases:
   build:
     commands:
       - mkdir build-output
-      - cp -R etl/deployment/*.yaml build-output
       - echo Build started on `date`
   post_build:
     commands:
