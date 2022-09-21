@@ -1,18 +1,22 @@
 version: 0.2
 
+env:
+  variables:
+    S3_ARTIFACT_BUCKET_DEV: cmi-artifacts-dev
+    ING_TEMPLATES: |
+      s3.yaml
+      
 phases:
-  install:
-    runtime-versions:
-      java: corretto11
   pre_build:
     commands:
       - echo Nothing to do in the pre_build phase...
   build:
     commands:
-      - echo Build started on `date`
+      - mkdir build-output
+      - cp -R client_profitability/ingestion/deployment/*.yaml build-output
   post_build:
     commands:
       - echo Build completed on `date`
 artifacts:
   files:
-    - target/messageUtil-1.0.jar
+    - 'build-output/cmi-root-stack.yaml'
