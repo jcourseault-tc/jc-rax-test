@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  variables:
+    ING_TEMPLATES: |
+      s3.yaml
+      
 phases:
   install:
     runtime-versions:
