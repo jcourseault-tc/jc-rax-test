@@ -1,9 +1,28 @@
-
 AWSTemplateFormatVersion: "2010-09-09"
 Description: initial yaml file for ssense
 
 Resources:
-  S3Bucket:
-    Type: 'AWS::S3::Bucket'
+  MyTestRole:
+    Type: AWS::IAM::Role
     Properties:
-      BucketName: joey-c-test-bucket-dev
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: Role to provide access to S3
+      Policies:
+        - PolicyName: EmbeddedInlinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'cloudformation:*'
+                Resource: '*'
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      RoleName: LambdaS3Access
