@@ -6,15 +6,11 @@ env:
       s3.yaml
       
 phases:
-  install:
-    runtime-versions:
-      java: corretto11
   pre_build:
     commands:
       - echo Nothing to do in the pre_build phase...
   build:
     commands:
-      - mkdir build-output
       - echo Build started on `date`
   post_build:
     commands:
@@ -22,4 +18,3 @@ phases:
 artifacts:
   files:
     - 'build-output/application.yaml'
-  name: $(AWS_REGION)-$(date +%Y-%m-%d) 
