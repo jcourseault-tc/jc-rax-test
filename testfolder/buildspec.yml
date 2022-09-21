@@ -9,6 +9,8 @@ phases:
       - echo Nothing to do in the pre_build phase...
   build:
     commands:
+      - mkdir build-output
+      - cp -R client_profitability/ingestion/deployment/*.yaml build-output
       - echo Build started on `date`
   post_build:
     commands:
