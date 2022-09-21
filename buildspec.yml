@@ -13,10 +13,10 @@ phases:
   build:
     commands:
       - mkdir build-output
-      - cp -R client_profitability/ingestion/deployment/*.yaml build-output
+      - cp -R etl/deployment/*.yaml build-output
   post_build:
     commands:
       - echo Build completed on `date`
 artifacts:
   files:
-    - 'build-output/cmi-root-stack.yaml'
+    - 'build-output/application.yaml'
