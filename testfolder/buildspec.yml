@@ -17,5 +17,5 @@ phases:
       - echo Build completed on `date`
 artifacts:
   files:
-    - application.yaml
+    - 'build-output/application.yaml'
   name: $(AWS_REGION)-$(date +%Y-%m-%d) 
