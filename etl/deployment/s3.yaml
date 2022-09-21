@@ -1,28 +1,34 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: initial yaml file for ssense
-
-Resources:
-  MyTestRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      Description: Role to provide access to S3
-      Policies:
-        - PolicyName: EmbeddedInlinePolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: 'cloudformation:*'
-                Resource: '*'
-      ManagedPolicyArns: 
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
-      RoleName: LambdaS3Access
+Resources: 
+  MySourceQueue: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      RedrivePolicy: 
+        deadLetterTargetArn: 
+          Fn::GetAtt: 
+            - "MyDeadLetterQueue"
+            - "Arn"
+        maxReceiveCount: 5
+  MyDeadLetterQueue: 
+    Type: AWS::SQS::Queue
+Outputs: 
+  SourceQueueURL: 
+    Description: "URL of source queue"
+    Value: 
+      Ref: "MySourceQueue"
+  SourceQueueARN: 
+    Description: "ARN of source queue"
+    Value: 
+      Fn::GetAtt: 
+        - "MySourceQueue"
+        - "Arn"
+  DeadLetterQueueURL: 
+    Description: "URL of dead-letter queue"
+    Value: 
+      Ref: "MyDeadLetterQueue"
+  DeadLetterQueueARN: 
+    Description: "ARN of dead-letter queue"
+    Value: 
+      Fn::GetAtt: 
+        - "MyDeadLetterQueue"
+        - "Arn"
