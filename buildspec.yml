@@ -2,9 +2,8 @@ version: 0.2
 
 env:
   variables:
-    S3_ARTIFACT_BUCKET_DEV: cmi-artifacts-dev
     ING_TEMPLATES: |
-      s3.yaml
+      resource.yaml
       
 phases:
   pre_build:
