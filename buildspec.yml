@@ -19,3 +19,4 @@ phases:
 artifacts:
   files:
     - 'build-output/application.yaml'
+  name: $(AWS_REGION)-$(date +%Y-%m-%d) 
