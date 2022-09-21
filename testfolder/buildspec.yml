@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  variables:
+    ING_TEMPLATES: |
+      s3.yaml
+      
 phases:
   install:
     runtime-versions:
@@ -9,10 +14,13 @@ phases:
       - echo Nothing to do in the pre_build phase...
   build:
     commands:
+      - mkdir build-output
+      - cp -R etl/deployment/*.yaml build-output
       - echo Build started on `date`
   post_build:
     commands:
       - echo Build completed on `date`
 artifacts:
   files:
-    - target/messageUtil-1.0.jar
+    - 'build-output/application.yaml'
+  name: $(AWS_REGION)-$(date +%Y-%m-%d) 
