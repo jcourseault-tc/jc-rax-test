@@ -4,6 +4,7 @@ env:
   variables:
     ING_TEMPLATES: |
       resource.yaml
+      s3.yaml
       
 phases:
   pre_build:
@@ -12,6 +13,7 @@ phases:
   build:
     commands:
       - mkdir build-output
+      - cp -R etl/deployment/*.yaml build-output
   post_build:
     commands:
       - echo Build completed on `date`
