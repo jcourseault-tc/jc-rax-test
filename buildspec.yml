@@ -2,6 +2,7 @@ version: 0.2
 
 env:
   variables:
+    S3_ARTIFACT_BUCKET_DEV: joey-ssense-2
     ING_TEMPLATES: |
       resource.yaml
       s3.yaml
