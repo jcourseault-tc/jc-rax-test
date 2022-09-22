@@ -14,7 +14,10 @@ phases:
     commands:
       - mkdir build-output
       - cp -R etl/deployment/*.yaml build-output
-
+  post_build:
+    commands:
+      - echo Nothing to do in the pre_build phase...
+      
 artifacts:
   files:
     - 'build-output/resource.yaml'
