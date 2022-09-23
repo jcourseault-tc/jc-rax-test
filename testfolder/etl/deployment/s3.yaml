@@ -4,6 +4,5 @@ Description: initial yaml file for ssense
 Resources:
   S3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
     Properties:
       BucketName: joey-c-test-bucket-dev
