@@ -5,7 +5,6 @@ env:
     S3_ARTIFACT_BUCKET_DEV: joey-ssense-2
     ING_TEMPLATES: |
       sns.yaml
-      sqs.yaml
       s3.yaml
       
 phases:
