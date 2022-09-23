@@ -1,6 +1,18 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Resources: 
-  MySourceQueue: 
-    Type: AWS::SQS::Queue
-    Properties: 
-      QueueName: "ABCDEFQueue"
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 
+  This template sets up root stack for cicd
+
+Resources:
+  Stacksnsrole:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/sns.yaml
+  Stacks3role:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/s3.yaml
+  Stackqueueurole:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/queue.yaml
+
