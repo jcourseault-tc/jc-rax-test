@@ -17,7 +17,7 @@ phases:
       - cp -R etl/deployment/*.yaml build-output
       - for ing_template in $ING_TEMPLATES; 
          do
-          aws s3 cp build-output/$ing_template "s3://${S3_ARTIFACT_BUCKET_DEV}/cmi-codebuild-dev/";
+          aws s3 cp build-output/$ing_template "s3://${S3_ARTIFACT_BUCKET_DEV}/ssense-codebuild-dev/";
         done
   post_build:
     commands:
