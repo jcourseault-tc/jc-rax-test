@@ -3,6 +3,7 @@ Resources:
   MySourceQueue: 
     Type: AWS::SQS::Queue
     Properties: 
+      QueueName: "ABCDQueue"
       RedrivePolicy: 
         deadLetterTargetArn: 
           Fn::GetAtt: 

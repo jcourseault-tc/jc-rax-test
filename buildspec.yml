@@ -4,7 +4,9 @@ env:
   variables:
     S3_ARTIFACT_BUCKET_DEV: joey-ssense-2
     ING_TEMPLATES: |
+      sns.yaml
       s3.yaml
+      queue.yaml
       
 phases:
   pre_build:
@@ -14,10 +16,14 @@ phases:
     commands:
       - mkdir build-output
       - cp -R etl/deployment/*.yaml build-output
+      - for ing_template in $ING_TEMPLATES; 
+         do
+          aws s3 cp build-output/$ing_template "s3://${S3_ARTIFACT_BUCKET_DEV}/ssense-codebuild-dev/";
+        done
   post_build:
     commands:
       - echo Nothing to do in the pre_build phase...
       
 artifacts:
   files:
-    - 'build-output/resource.yaml'
+    - 'build-output/root-stack.yaml'
