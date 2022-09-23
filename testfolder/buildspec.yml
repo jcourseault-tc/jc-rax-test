@@ -11,7 +11,7 @@ env:
 phases:
   pre_build:
     commands:
-      - echo Nothing to do in the pre_build phase...
+      - echo Nothing to do in the pre_build phase-
   build:
     commands:
       - mkdir build-output
