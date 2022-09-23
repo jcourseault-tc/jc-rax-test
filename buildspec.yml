@@ -6,6 +6,7 @@ env:
     ING_TEMPLATES: |
       sns.yaml
       s3.yaml
+      queue.yaml
       
 phases:
   pre_build:
