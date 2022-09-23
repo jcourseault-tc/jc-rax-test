@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 
-  This template sets up root stack for cicd
+  This template sets up root stack for cicd ssense
 
 Resources:
   Stacksnsrole:
