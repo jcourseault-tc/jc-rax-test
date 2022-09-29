@@ -29,7 +29,7 @@ Parameters:
     NoEcho: true
     MinLength: 40
     MaxLength: 40
-    AllowedPattern: '[a-z0-9]*_'
+#     AllowedPattern: '[a-z0-9]*_'
   # *** The remaining parameters should either be:
   # - overridden via changing "Default" here (PREFERABLE, since then they're in source control)
   # - or you can pass them in when creating / updating the stack
@@ -309,19 +309,6 @@ Resources:
               Name: DeployCodeBuildProject
           Name: Deploy-project
 
-  SsenseWebhook:
-    Type: AWS::CodePipeline::Webhook
-    Properties: 
-      [Authentication](#cfn-codepipeline-webhook-authentication): String
-      [AuthenticationConfiguration](#cfn-codepipeline-webhook-authenticationconfiguration): 
-        WebhookAuthConfiguration
-      [Filters](#cfn-codepipeline-webhook-filters): 
-        - WebhookFilterRule
-      [Name](#cfn-codepipeline-webhook-name): String
-      [RegisterWithThirdParty](#cfn-codepipeline-webhook-registerwiththirdparty): Boolean
-      [TargetAction](#cfn-codepipeline-webhook-targetaction): String
-      [TargetPipeline](#cfn-codepipeline-webhook-targetpipeline): String
-      [TargetPipelineVersion](#cfn-codepipeline-webhook-targetpipelineversion): Integer
 
 Outputs:
   SsenseCodeBuildProj:
