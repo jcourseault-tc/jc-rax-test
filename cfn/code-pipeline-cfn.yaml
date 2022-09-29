@@ -127,10 +127,10 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-qc-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": "${ArtifactsBucket}" }'
+            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath:  BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt CodePipelineRole.Arn
+            RoleArn: !GetAtt SsenseCloudFormationRole.Arn
           RunOrder: 4
 
       -
@@ -160,10 +160,10 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-prod-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "prod", "ArtifactsBucket": "${ArtifactsBucket}" }'
+            ParameterOverrides: !Sub  '{"EnvironmentType": "prod", "ArtifactsBucket": "${ArtifactsBucket}"  , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath: BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt CodePipelineRole.Arn
+            RoleArn: !GetAtt SsenseCloudFormationRole.Arn
           RunOrder: 4
 
 
@@ -260,6 +260,7 @@ Resources:
                 Resource: '*'
 
 
+
   # AppPipelineWebhook:
   #   Type: 'AWS::CodePipeline::Webhook'
   #   Properties:
@@ -276,6 +277,24 @@ Resources:
   #       - GlueJobsCodePipeline
   #       - Version
   #     RegisterWithThirdParty: true
+
+  SsenseCloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "cloudformation.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
                 
 
   
