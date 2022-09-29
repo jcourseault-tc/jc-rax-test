@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  Creates a glue job
+ 
+Parameters:
+
+  EnvironmentType:
+    Description: Environment Type
+    Type: String
+    Default: 'qa'
+    AllowedValues:
+      - dev
+      - qa
+      - prod   
+
+  GlueJobName:
+    Description: Glue ETL Job Name.
+    Type: String
+    Default: etl-job-1
+
+
+  ArtifactsBucket:
+    Description: Artifacts Bucket
+    Type: String
+    Default:  rax-ah-ssense-artifacts
+ 
+  JobScriptKey:
+    Type: String
+    Description: Job Script Key
+    Default: scripts/etl-sample.py  
+
+Resources:
+
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        -
+          PolicyName: "GlueJobPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+
+
+  SsenseGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      GlueVersion: "2.0"
+      Name: !Sub GlueJobName-{EnvironmentType}
+      Role: !Ref GlueJobRole
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub s3://{ArtifactsBucket}/{JobScriptKey}"
+      DefaultArguments:
+        "--job-bookmark-option": "job-bookmark-enable"
+        "--environment-type": !Ref EnvironmentType
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      MaxRetries: 0
+
+
+  
+
+
+
+Outputs:
+  StackName:
+    Description: 'Stack name.'
+    Value: !Sub '${AWS::StackName}'
