@@ -44,7 +44,7 @@ Parameters:
     AllowedPattern: "[A-Za-z0-9-]+"
   GitHubBranch:
     Type: String
-    Default: dev
+    Default: ssense
     AllowedPattern: "[A-Za-z0-9-]+"
 
 Resources:
