@@ -24,12 +24,12 @@ Parameters:
     Type: String
     Default: '/aws/codebuild/*'    
   ############
-  # GitHubOAuthToken:
-  #   Type: String
-  #   NoEcho: true
-  #   MinLength: 40
-  #   MaxLength: 40
-    # AllowedPattern: '[a-z0-9]*_'
+  GitHubOAuthToken:
+    Type: String
+    NoEcho: true
+    MinLength: 40
+    MaxLength: 40
+    AllowedPattern: '[a-z0-9]*_'
   # *** The remaining parameters should either be:
   # - overridden via changing "Default" here (PREFERABLE, since then they're in source control)
   # - or you can pass them in when creating / updating the stack
@@ -257,7 +257,7 @@ Resources:
                 Repo: !Ref GitHubRepo
                 Branch: !Ref GitHubBranch
                 PollForSourceChanges: true 
-                OAuthToken: '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'
+                OAuthToken: !Ref GitHubOAuthToken
               Name: SourceRepo
               OutputArtifacts:
                 - Name: SourceArtifact
