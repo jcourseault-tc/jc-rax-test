@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    S3_ARTIFACT_BUCKET_DEV: joey-ssense-2
+    S3_ARTIFACT_BUCKET_DEV: aws-glue-assets-119428626494-us-west-2
     ING_TEMPLATES: |
 
       
@@ -16,7 +16,7 @@ phases:
       - cp -R etl/deployment/*.yaml build-output
       - for ing_template in $ING_TEMPLATES; 
          do
-          aws s3 cp build-output/$ing_template "s3://${S3_ARTIFACT_BUCKET_DEV}/ssense-codebuild-dev/";
+          aws s3 cp build-output/$ing_template "s3://${S3_ARTIFACT_BUCKET_DEV}/etl/codebuild-output/";
         done
   post_build:
     commands:
