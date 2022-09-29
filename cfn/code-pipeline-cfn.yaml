@@ -128,12 +128,44 @@ Resources:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-qc-stack
             ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": ${ArtifactsBucket} }'
-            TemplatePath: !Sub ${ArtifactsBucket}/cfn/glue-cfn.yml 
+            TemplatePath:  "BuildArtifacts::build-output/glue-cfn.yaml" 
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt CodePipelineRole.Arn
           RunOrder: 4
 
 
+    -
+        Name: PROD_Deployment_Approval
+        Actions:
+        -
+          Name: PROD_Deployment_Approval
+          InputArtifacts: []
+          ActionTypeId:
+             Category: Approval
+             Owner: AWS
+             Provider: Manual
+             Version: "1"
+          Configuration:
+            NotificationArn: !Ref DeploymentPipelineSNSTopic
+            CustomData: "Please Provide Required Action for PROD Deployment "
+          RunOrder: 3
+        -
+          Name: QA_Deployment
+          InputArtifacts:
+            - Name: BuildArtifacts
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Provider: "CloudFormation"
+            Version: '1'
+          Configuration:
+            ActionMode: CREATE_UPDATE
+            StackName: !Sub ssense-glue-jobs-qc-stack
+            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": ${ArtifactsBucket} }'
+            TemplatePath: !Sub s3://${ArtifactsBucket}/cfn/glue-cfn.yml 
+            Capabilities: CAPABILITY_NAMED_IAM
+            RoleArn: !GetAtt CodePipelineRole.Arn
+          RunOrder: 4
 
 
   # CodeBuild
@@ -229,22 +261,22 @@ Resources:
                 Resource: '*'
 
 
-  AppPipelineWebhook:
-    Type: 'AWS::CodePipeline::Webhook'
-    Properties:
-      Name: AppPipelineWebhook
-      Authentication: GITHUB_HMAC
-      AuthenticationConfiguration:
-        SecretToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
-      Filters:
-        - JsonPath: $.ref
-          MatchEquals: 'refs/heads/{Branch}'
-      TargetPipeline: !Ref GlueJobsCodePipeline
-      TargetAction: GitHubSourceAction
-      TargetPipelineVersion: !GetAtt 
-        - GlueJobsCodePipeline
-        - Version
-      RegisterWithThirdParty: true
+  # AppPipelineWebhook:
+  #   Type: 'AWS::CodePipeline::Webhook'
+  #   Properties:
+  #     Name: AppPipelineWebhook
+  #     Authentication: GITHUB_HMAC
+  #     AuthenticationConfiguration:
+  #       SecretToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
+  #     Filters:
+  #       - JsonPath: $.ref
+  #         MatchEquals: 'refs/heads/{Branch}'
+  #     TargetPipeline: !Ref GlueJobsCodePipeline
+  #     TargetAction: GitHubSourceAction
+  #     TargetPipelineVersion: !GetAtt 
+  #       - GlueJobsCodePipeline
+  #       - Version
+  #     RegisterWithThirdParty: true
                 
 
   
