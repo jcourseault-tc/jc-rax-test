@@ -4,9 +4,7 @@ env:
   variables:
     S3_ARTIFACT_BUCKET_DEV: joey-ssense-2
     ING_TEMPLATES: |
-      sns.yaml
-      s3.yaml
-      queue.yaml
+
       
 phases:
   pre_build:
