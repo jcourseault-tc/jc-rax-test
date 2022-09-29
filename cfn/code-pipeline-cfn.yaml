@@ -10,16 +10,13 @@ Parameters:
     AllowedValues:
       - dev
       - qa
-      - prod   
+      - prod
 
-  # *** This value must always be passed in when creating / updating stack
-  # "NoEcho" is set to true, for security, so token won't be visible when examining the resulting stack
-  GitHubOAuthToken:
+
+  ArtifactsBucket:
     Type: String
-    NoEcho: true
-    MinLength: 40
-    MaxLength: 40
-    AllowedPattern: '[a-z0-9]*'
+    Description: artifacts bucket
+    Default: rax-ah-ssense-artifacts
 
   # *** The owner of the Github repo for this application.
   GitHubOwner:
@@ -38,22 +35,33 @@ Parameters:
     AllowedPattern: "[A-Za-z0-9-]+"
 
 
-  CodePipelineArtifactsBucket:
+
+  Cloudwatchlogs:
+    Description: 'cloud watch logs for code pipeline'
     Type: String
-    Description: Bucket to store artifacts created by codepipeline
-    Default: rax-ah-codepipeline-artifacts
+    Default: '/ssense/pipeline/*' 
 
 
 Resources:
+
+
+  DeploymentPipelineSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'deployment-pipeline-${EnvironmentType}-topic'
+      Subscription:
+      - Endpoint: ahmad.haggag@rackspace.com
+        Protocol: email
+
   # CodePipeline
-  DeployPipelineForGlueWorkflow: 
+  GlueJobsCodePipeline: 
     Type: AWS::CodePipeline::Pipeline
     Properties: 
       Name: !Sub DeployGlueJobsPipeline-${AWS::StackName}
       RoleArn: !GetAtt CodePipelineRole.Arn
       ArtifactStore: 
         Type: S3
-        Location: !Ref CodePipelineArtifactsBucket
+        Location: !Ref ArtifactsBucket
       Stages: 
       - 
         Name: Source
@@ -75,26 +83,64 @@ Resources:
               OAuthToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
           RunOrder: 1
       -
-        Name: DeployGlueJobs
+        Name: BuildGlueJobs
         Actions:
         -
-          Name: DeployGlueJobsStack
-          InputArtifacts:
-            - Name: SourceOutput
+          Name: BuildGlueJobsStack
           ActionTypeId:
             Category: Build
             Owner: AWS
-            Version: "1"
             Provider: CodeBuild
+            Version: "1"
+          InputArtifacts:
+            - Name: SourceOutput
+          OutputArtifacts:
+            - Name: BuildArtifacts
           Configuration:
-            ProjectName: !Ref SsenseCodeDeploy
-          RunOrder: 1
+            ProjectName: !Ref SsenseCodeBuild
+          RunOrder: 2
+
+      -
+        Name: QA_Deployment_Approval
+        Actions:
+        -
+          Name: QA_Deployment_Approval
+          InputArtifacts: []
+          ActionTypeId:
+             Category: Approval
+             Owner: AWS
+             Provider: Manual
+             Version: "1"
+          Configuration:
+            NotificationArn: !Ref DeploymentPipelineSNSTopic
+            CustomData: "Please Provide Required Action for QA Deployment "
+          RunOrder: 3
+        -
+          Name: QA_Deployment
+          InputArtifacts:
+            - Name: BuildArtifacts
+          ActionTypeId:
+            Category: Deploy
+            Owner: AWS
+            Provider: "CloudFormation"
+            Version: '1'
+          Configuration:
+            ActionMode: CREATE_UPDATE
+            StackName: !Sub ssense-glue-jobs-qc-stack
+            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": ${ArtifactsBucket} }'
+            TemplatePath: !Sub ${ArtifactsBucket}/cfn/glue-cfn.yml 
+            Capabilities: CAPABILITY_NAMED_IAM
+            RoleArn: !GetAtt CodePipelineRole.Arn
+          RunOrder: 4
+
+
+
 
   # CodeBuild
-  SsenseCodeDeploy:
+  SsenseCodeBuild:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub DeployGlueWorkflowStack-${AWS::StackName}
+      Name: !Sub BuildGlueJobsStack-${AWS::StackName}
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Source:
         BuildSpec: glue-buildspec.yaml
@@ -109,6 +155,8 @@ Resources:
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Ref AWS::AccountId
+          - Name: ARTIFACTS_BUCKET
+            Value: !Ref ArtifactsBucket
           - Name: ENV_TYPE
             Value: !Ref EnvironmentType
       LogsConfig: 
@@ -127,7 +175,9 @@ Resources:
           Effect: Allow
           Action: sts:AssumeRole
           Principal:
-            Service: codepipeline.amazonaws.com
+            Service: 
+               - codepipeline.amazonaws.com
+               - cloudformation.amazonaws.com
       Path: /
       Policies:
         - PolicyName: !Sub CodePipeline-Policy-${AWS::StackName}
@@ -135,17 +185,20 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - codebuild:BatchGetBuilds
-                  - codebuild:StartBuild
+                  - codecommit:*
+                  - codebuild:*
+                  - codedeploy:*
                   - cloudformation:*
                   - cloudwatch:*
+                  - s3:*
+                  - sns:*
                 Resource: '*'
               - Effect: Allow
                 Action:
-                  - s3:*
-                Resource:
-                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}
-                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}/*         
+                  - 'iam:PassRole'
+                Resource: '*'
+ 
+      
 
   CodeBuildRole:
     Type: AWS::IAM::Role
@@ -169,16 +222,29 @@ Resources:
                   - cloudwatch:*
                   - codebuild:*
                   - glue:*
+                  - s3:*
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - s3:*
-                Resource:
-                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}
-                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}/*
+
+
+  AppPipelineWebhook:
+    Type: 'AWS::CodePipeline::Webhook'
+    Properties:
+      Name: AppPipelineWebhook
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: 'refs/heads/{Branch}'
+      TargetPipeline: !Ref GlueJobsCodePipeline
+      TargetAction: GitHubSourceAction
+      TargetPipelineVersion: !GetAtt 
+        - GlueJobsCodePipeline
+        - Version
+      RegisterWithThirdParty: true
                 
 
   

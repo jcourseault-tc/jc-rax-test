@@ -9,19 +9,7 @@ phases:
     commands:
       - ls -al
       - aws --version
-      - echo Build started on `date`
-      - echo $ENV_TYPE
-      - mkdir build-output
-      - cp -R cfn/*.yaml build-output
-      - cp -R glue-jobs  build-output
-      - cd build-output; ls -la
-      - aws s3 cp build-output/glue-jobs s3://rax-ah-ssense-artifacts/glue-scripts/ --recursive
-      # - aws cloudformation deploy --stack-name glue-covid19 --template-file ./cloudformation/glue-workflow-stack.yml --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --region $AWS_REGION
-
-  post_build:
-    commands:
-      # Copy python scripts in src directory to bucket/glue-scripts.
-      # Leverages the environment variable named $AWS_REGION which is
-      # automatically provided by AWS CodeBuild based on where the build is running.
-      # Also leverages the environment variable named $AWS_ACCOUNT_ID provided by
-      # the AWS CodeBuild project defined in codepipeline-stack.yml
+      - echo Deploy Glue Jobs started on = `date` for Environment Type =  $ENV_TYPE ,  Artifacts Bucket = $ARTIFACTS_BUCKET
+      - aws s3 cp cfn s3://$ARTIFACTS_BUCKET/cfn/ --recursive
+      - aws s3 cp glue-jobs s3://$ARTIFACTS_BUCKET/glue-scripts/ --recursive
+      # - aws cloudformation deploy --stack-name ssense-glue-jobs-$ENV_TYPE-stack --template-file ./cfn/glue-cfn.yml  --parameter-overrides ParameterKey=EnvironmentType,ParameterValue=qa,ParameterKey=JobScriptKey,ParameterValue=glue-scripts/etl-sample.py   --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --region $AWS_REGION
