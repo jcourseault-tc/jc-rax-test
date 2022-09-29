@@ -1,0 +1,333 @@
+#wip
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Codepipeline stack for creating cicd pipelines
+
+Parameters:
+  CodeBuildName:
+    Description: Name of pipeline.
+    Type: String
+    Default: "codebuild-test"
+  CodePipelineName:
+    Description: Name of pipeline.
+    Type: String
+    Default: "codepipeline-test"
+  RepositoryName:
+    Type: String
+#     Default: "https://github.com/jcourseault-tc/jc-rax-test/tree/dev/testfolder"
+    Default: "https://github.com/jcourseault-tc/jc-rax-test.git"
+  pPipelineArtifactsBucket:
+    Type: String
+    Description: Pipeline artifacts bucket name
+    Default: "aws-glue-assets-119428626494-us-west-2"
+  Cloudwatchlogs:
+    Description: 'cloud watch logs for code build in dev env'
+    Type: String
+    Default: '/aws/codebuild/*'    
+  ############
+  GitHubOAuthToken:
+    Type: String
+    NoEcho: true
+    MinLength: 40
+    MaxLength: 40
+    AllowedPattern: '[a-z0-9]*_'
+  # *** The remaining parameters should either be:
+  # - overridden via changing "Default" here (PREFERABLE, since then they're in source control)
+  # - or you can pass them in when creating / updating the stack
+  # *** The owner of the Github repo for this application.
+  GitHubOwner:
+    Type: String
+    Default: jcourseault-tc
+    AllowedPattern: "[A-Za-z0-9-]+"
+  GitHubRepo:
+    Type: String
+    Default: jc-rax-test
+    AllowedPattern: "[A-Za-z0-9-]+"
+  GitHubBranch:
+    Type: String
+    Default: ssense
+    AllowedPattern: "[A-Za-z0-9-]+"
+
+Resources:
+  ### AWS Service role IAM RESOURCES ###
+  CodePipelineServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: codepipelineservicepolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${Cloudwatchlogs}"
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${Cloudwatchlogs}:*"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:GetBucketAcl"
+                  - "s3:GetBucketLocation"
+                Resource:
+                  - !Sub "arn:aws:s3:::codepipeline-us*"  
+              - Effect: Allow
+                Action:
+                  - "appconfig:StartDeployment"
+                  - "opsworks:DescribeStacks"
+                  - "states:DescribeStateMachine"
+                  - "devicefarm:GetRun"
+                  - "rds:*"
+                  - "autoscaling:*"
+                  - "codebuild:BatchGetBuilds"
+                  - "devicefarm:ScheduleRun"
+                  - "servicecatalog:ListProvisioningArtifacts"
+                  - "devicefarm:ListDevicePools"
+                  - "servicecatalog:DescribeProvisioningArtifact"
+                  - "devicefarm:ListProjects"
+                  - "sns:*"
+                  - "lambda:ListFunctions"
+                  - "lambda:InvokeFunction"
+                  - "codedeploy:RegisterApplicationRevision"
+                  - "opsworks:DescribeDeployments"
+                  - "cloudformation:*"
+                  - "devicefarm:CreateUpload"
+                  - "codecommit:GetUploadArchiveStatus"
+                  - "cloudwatch:*"
+                  - "codecommit:GetRepository"
+                  - "opsworks:DescribeInstances"
+                  - "sns:*"
+                  - "sqs:*"
+                  - "ec2:*"
+                  - "codebuild:StartBuild"
+                  - "opsworks:DescribeApps"
+                  - "opsworks:UpdateStack"
+                  - "codebuild:BatchGetBuildBatches"
+                  - "codedeploy:CreateDeployment"
+                  - "codedeploy:GetApplicationRevision"
+                  - "codedeploy:GetDeploymentConfig"
+                  - "servicecatalog:DeleteProvisioningArtifact"
+                  - "codedeploy:GetApplication"
+                  - "codecommit:UploadArchive"
+                  - "s3:*"
+                  - "appconfig:GetDeployment"
+                  - "codecommit:CancelUploadArchive"
+                  - "devicefarm:GetUpload"
+                  - "appconfig:StopDeployment"
+                  - "codebuild:StartBuildBatch"
+                  - "servicecatalog:UpdateProduct"
+                  - "codedeploy:GetDeployment"
+                  - "states:StartExecution"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "codebuild:CreateReportGroup"
+                  - "codebuild:CreateReport"
+                  - "codebuild:UpdateReport"
+                  - "codebuild:BatchPutTestCases"
+                  - "codebuild:BatchPutCodeCoverages"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/codepipeline-test-*"    
+              - Effect: Allow
+                Action: "iam:Passrole"
+                Resource: "*"
+                Condition:
+                  StringEqualsIfExists: 
+                    iam:PassedToService:
+                      - "cloudformation.amazonaws.com"
+                      - "elasticbeanstalk.amazonaws.com"
+                      - "ec2.amazonaws.com"
+                      - "ecs-tasks.amazonaws.com"
+      Path: "/"
+      RoleName: "testCodePipelineServiceRole"
+
+  CodeBuildServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: codebuildservicepolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${Cloudwatchlogs}"
+                  - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${Cloudwatchlogs}:*"
+              - Effect: Allow
+                Action:
+                  - "codecommit:GitPull"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:datalake_test"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:GetBucketAcl"
+                  - "s3:GetBucketLocation"
+                Resource:
+                  - !Sub "arn:aws:s3:::codepipeline-us*"  
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:GetBucketAcl"
+                  - "s3:GetBucketLocation"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${pPipelineArtifactsBucket}"
+                  - !Sub "arn:${AWS::Partition}:s3:::${pPipelineArtifactsBucket}/*"
+              - Effect: Allow
+                Action:
+                  - "codebuild:CreateReportGroup"
+                  - "codebuild:CreateReport"
+                  - "codebuild:UpdateReport"
+                  - "codebuild:BatchPutTestCases"
+                  - "codebuild:BatchPutCodeCoverages"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/codebuild-test-*"
+      Path: "/"
+      RoleName: "testCodeBuildServiceRole"
+
+  SsenseCodeBuildProj:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref CodeBuildName
+      Description: Ssense code build for phase 2
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: S3
+        Location: !Ref pPipelineArtifactsBucket
+        Name: !Ref CodeBuildName
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        Type: LINUX_CONTAINER
+        ImagePullCredentialsType: CODEBUILD
+      Source:
+        BuildSpec: "buildspec.yml"
+        Type: GITHUB
+        Location: !Ref RepositoryName
+        # Location: !Ref RepositoryName
+      # SourceVersion: "refs/heads/master"
+
+  SsenseCodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location: !Ref pPipelineArtifactsBucket
+        Type: S3
+      Name: !Ref CodePipelineName
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Actions:
+            - ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
+                PollForSourceChanges: true 
+                OAuthToken: !Ref GitHubOAuthToken
+              Name: SourceRepo
+              OutputArtifacts:
+                - Name: SourceArtifact
+              RunOrder: 1
+          Name: GitHub-project
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName: !Ref SsenseCodeBuildProj
+              InputArtifacts:
+                - Name: SourceArtifact
+              Name: CodeBuild-Project
+              OutputArtifacts:
+                - Name: BuildArtifact  
+              RunOrder: 2
+          Name: CodeBuildProject
+        - Actions:
+            - ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: "1"
+              Configuration:
+                ExternalEntityLink: "https://github.com/jcourseault-tc/jc-rax-test/pulls"
+                # NotificationArn: <<arn>>
+              InputArtifacts: []
+              Name: Approval
+              RunOrder: 3
+          Name: Deployment_Approval
+        - Actions:
+            - ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: '1'
+                Provider: "CloudFormation"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: ssense-stack-dev
+                TemplatePath: "BuildArtifact::build-output/root-stack.yaml"
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt CodePipelineServiceRole.Arn
+              InputArtifacts:
+                - Name: BuildArtifact
+              RunOrder: 4
+              Name: DeployCodeBuildProject
+          Name: Deploy-project
+
+  SsenseWebhook:
+    Type: AWS::CodePipeline::Webhook
+    Properties: 
+      [Authentication](#cfn-codepipeline-webhook-authentication): String
+      [AuthenticationConfiguration](#cfn-codepipeline-webhook-authenticationconfiguration): 
+        WebhookAuthConfiguration
+      [Filters](#cfn-codepipeline-webhook-filters): 
+        - WebhookFilterRule
+      [Name](#cfn-codepipeline-webhook-name): String
+      [RegisterWithThirdParty](#cfn-codepipeline-webhook-registerwiththirdparty): Boolean
+      [TargetAction](#cfn-codepipeline-webhook-targetaction): String
+      [TargetPipeline](#cfn-codepipeline-webhook-targetpipeline): String
+      [TargetPipelineVersion](#cfn-codepipeline-webhook-targetpipelineversion): Integer
+
+Outputs:
+  SsenseCodeBuildProj:
+    Description: SsenseCodeBuildProj Name
+    Value: !Ref SsenseCodeBuildProj
+
+  SsenseCodePipeline:
+    Description: SsenseCodePipeline Name
+    Value: !Ref SsenseCodePipeline
