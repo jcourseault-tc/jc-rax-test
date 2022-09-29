@@ -16,3 +16,7 @@ phases:
       - aws s3 cp cfn s3://$ARTIFACTS_BUCKET/cfn/ --recursive
       - aws s3 cp glue-jobs s3://$ARTIFACTS_BUCKET/glue-scripts/ --recursive
       # - aws cloudformation deploy --stack-name ssense-glue-jobs-$ENV_TYPE-stack --template-file ./cfn/glue-cfn.yml  --parameter-overrides ParameterKey=EnvironmentType,ParameterValue=qa,ParameterKey=JobScriptKey,ParameterValue=glue-scripts/etl-sample.py   --capabilities CAPABILITY_NAMED_IAM --no-fail-on-empty-changeset --region $AWS_REGION
+
+artifacts:
+  files:
+    - 'build-output/*.yaml'

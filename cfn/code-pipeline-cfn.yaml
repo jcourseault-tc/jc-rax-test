@@ -58,7 +58,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties: 
       Name: !Sub DeployGlueJobsPipeline-${AWS::StackName}
-      RoleArn: !GetAtt CodePipelineRole.Arn
+      RoleArn: !GetAtt SsenseCodePipelineRole.Arn
       ArtifactStore: 
         Type: S3
         Location: !Ref ArtifactsBucket
@@ -127,7 +127,7 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-qc-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
+            ParameterOverrides: !Sub  '{"EnvironmentType": "qa", "ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath:  BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt SsenseCloudFormationRole.Arn
@@ -160,7 +160,7 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-prod-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "prod", "ArtifactsBucket": "${ArtifactsBucket}"  , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
+            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": "${ArtifactsBucket}","JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath: BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt SsenseCloudFormationRole.Arn
@@ -172,7 +172,7 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Sub BuildGlueJobsStack-${AWS::StackName}
-      ServiceRole: !GetAtt CodeBuildRole.Arn
+      ServiceRole: !GetAtt SsenseCodeBuildRole.Arn
       Source:
         BuildSpec: glue-buildspec.yaml
         Type: CODEPIPELINE
@@ -196,7 +196,7 @@ Resources:
 
 
   # IAM Roles & Policies
-  CodePipelineRole:
+  SsenseCodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub CodePipeline-Role-${AWS::StackName}
@@ -231,7 +231,7 @@ Resources:
  
       
 
-  CodeBuildRole:
+  SsenseCodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub CodeBuild-Role-${AWS::StackName}
@@ -270,7 +270,7 @@ Resources:
   #       SecretToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
   #     Filters:
   #       - JsonPath: $.ref
-  #         MatchEquals: 'refs/heads/{Branch}'
+  #         MatchEquals: 'refs/heads/{GitHubBranch}'
   #     TargetPipeline: !Ref GlueJobsCodePipeline
   #     TargetAction: GitHubSourceAction
   #     TargetPipelineVersion: !GetAtt 
