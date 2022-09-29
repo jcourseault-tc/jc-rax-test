@@ -127,14 +127,13 @@ Resources:
           Configuration:
             ActionMode: CREATE_UPDATE
             StackName: !Sub ssense-glue-jobs-qc-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": ${ArtifactsBucket} }'
-            TemplatePath:  "BuildArtifacts::build-output/glue-cfn.yaml" 
+            ParameterOverrides: !Sub  '{"EnvironmentType": "qa","ArtifactsBucket": "${ArtifactsBucket}" }'
+            TemplatePath:  BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt CodePipelineRole.Arn
           RunOrder: 4
 
-
-    -
+      -
         Name: PROD_Deployment_Approval
         Actions:
         -
@@ -160,9 +159,9 @@ Resources:
             Version: '1'
           Configuration:
             ActionMode: CREATE_UPDATE
-            StackName: !Sub ssense-glue-jobs-qc-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": ${ArtifactsBucket} }'
-            TemplatePath: !Sub s3://${ArtifactsBucket}/cfn/glue-cfn.yml 
+            StackName: !Sub ssense-glue-jobs-prod-stack
+            ParameterOverrides: !Sub  '{"EnvironmentType": "prod", "ArtifactsBucket": "${ArtifactsBucket}" }'
+            TemplatePath: BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt CodePipelineRole.Arn
           RunOrder: 4

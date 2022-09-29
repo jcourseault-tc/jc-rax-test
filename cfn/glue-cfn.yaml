@@ -63,7 +63,7 @@ Resources:
     Type: AWS::Glue::Job
     Properties:
       GlueVersion: "2.0"
-      Name: !Sub GlueJobName-{EnvironmentType}
+      Name: !Sub ssense-etl-${EnvironmentType}
       Role: !Ref GlueJobRole
       Command:
         Name: glueetl
