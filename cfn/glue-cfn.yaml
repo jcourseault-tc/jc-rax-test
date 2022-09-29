@@ -75,7 +75,7 @@ Resources:
         MaxConcurrentRuns: 1
       MaxRetries: 0
       WorkerType: Standard
-      MaxCapacity: 2
+      NumberOfWorkers: 1
 
 
   
