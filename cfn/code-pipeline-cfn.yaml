@@ -1,0 +1,184 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Model and provision AWS CodePipeline and AWS CodeBuild
+
+Parameters:
+
+  EnvironmentType:
+    Description: Environment Type
+    Type: String
+    Default: 'dev'
+    AllowedValues:
+      - dev
+      - qa
+      - prod   
+
+  # *** This value must always be passed in when creating / updating stack
+  # "NoEcho" is set to true, for security, so token won't be visible when examining the resulting stack
+  GitHubOAuthToken:
+    Type: String
+    NoEcho: true
+    MinLength: 40
+    MaxLength: 40
+    AllowedPattern: '[a-z0-9]*'
+
+  # *** The owner of the Github repo for this application.
+  GitHubOwner:
+    Type: String
+    Default: jcourseault-tc
+    AllowedPattern: "[A-Za-z0-9-]+"
+
+  GitHubRepo:
+    Type: String
+    Default: jc-rax-test
+    AllowedPattern: "[A-Za-z0-9-]+"
+
+  GitHubBranch:
+    Type: String
+    Default: cicd-dev
+    AllowedPattern: "[A-Za-z0-9-]+"
+
+
+  CodePipelineArtifactsBucket:
+    Type: String
+    Description: Bucket to store artifacts created by codepipeline
+    Default: rax-ah-codepipeline-artifacts
+
+
+Resources:
+  # CodePipeline
+  DeployPipelineForGlueWorkflow: 
+    Type: AWS::CodePipeline::Pipeline
+    Properties: 
+      Name: !Sub DeployGlueJobsPipeline-${AWS::StackName}
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore: 
+        Type: S3
+        Location: !Ref CodePipelineArtifactsBucket
+      Stages: 
+      - 
+        Name: Source
+        Actions: 
+        - 
+          Name: GitHubSourceAction
+          ActionTypeId: 
+            Category: Source
+            Owner: ThirdParty
+            Provider: GitHub
+            Version: "1"
+          OutputArtifacts: 
+            - Name: SourceOutput
+          Configuration: 
+              Owner: !Ref GitHubOwner
+              Repo: !Ref GitHubRepo
+              Branch: !Ref GitHubBranch
+              PollForSourceChanges: true 
+              OAuthToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
+          RunOrder: 1
+      -
+        Name: DeployGlueJobs
+        Actions:
+        -
+          Name: DeployGlueJobsStack
+          InputArtifacts:
+            - Name: SourceOutput
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Version: "1"
+            Provider: CodeBuild
+          Configuration:
+            ProjectName: !Ref SsenseCodeDeploy
+          RunOrder: 1
+
+  # CodeBuild
+  SsenseCodeDeploy:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub DeployGlueWorkflowStack-${AWS::StackName}
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Source:
+        BuildSpec: glue-buildspec.yaml
+        Type: CODEPIPELINE
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment: 
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        Type: LINUX_CONTAINER
+        PrivilegedMode: True
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Name: ENV_TYPE
+            Value: !Ref EnvironmentType
+      LogsConfig: 
+        CloudWatchLogs:
+          Status: ENABLED
+
+
+  # IAM Roles & Policies
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CodePipeline-Role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            Service: codepipeline.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: !Sub CodePipeline-Policy-${AWS::StackName}
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                  - cloudformation:*
+                  - cloudwatch:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource:
+                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}/*         
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CodeBuild-Role-${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            Service: codebuild.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: !Sub CodeBuild-Policy-${AWS::StackName}
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - cloudwatch:*
+                  - codebuild:*
+                  - glue:*
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource:
+                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:s3:::${CodePipelineArtifactsBucket}-${AWS::AccountId}-${AWS::Region}/*
+                
+
+  
