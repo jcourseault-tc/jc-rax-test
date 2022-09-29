@@ -149,7 +149,7 @@ Resources:
             CustomData: "Please Provide Required Action for PROD Deployment "
           RunOrder: 3
         -
-          Name: QA_Deployment
+          Name: PROD_Deployment
           InputArtifacts:
             - Name: BuildArtifacts
           ActionTypeId:
