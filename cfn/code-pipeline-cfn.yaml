@@ -79,8 +79,8 @@ Resources:
               Owner: !Ref GitHubOwner
               Repo: !Ref GitHubRepo
               Branch: !Ref GitHubBranch
-              PollForSourceChanges: true 
-              OAuthToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
+              PollForSourceChanges: false 
+              OAuthToken: '{{resolve:secretsmanager:joey-ssense:SecretString:token}}'
           RunOrder: 1
       -
         Name: BuildGlueJobs
@@ -126,7 +126,7 @@ Resources:
             Version: '1'
           Configuration:
             ActionMode: CREATE_UPDATE
-            StackName: !Sub ssense-glue-jobs-qc-stack
+            StackName: !Sub ssense-glue-etl-qc-stack
             ParameterOverrides: !Sub  '{"EnvironmentType": "qa", "ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath:  BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
@@ -159,8 +159,8 @@ Resources:
             Version: '1'
           Configuration:
             ActionMode: CREATE_UPDATE
-            StackName: !Sub ssense-glue-jobs-prod-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": "${ArtifactsBucket}","JobScriptKey" :"glue-scripts/etl-sample.py" }'
+            StackName: !Sub ssense-glue-etl-prod-stack
+            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath: BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt SsenseCloudFormationRole.Arn
@@ -259,25 +259,6 @@ Resources:
                   - logs:PutLogEvents
                 Resource: '*'
 
-
-
-  # AppPipelineWebhook:
-  #   Type: 'AWS::CodePipeline::Webhook'
-  #   Properties:
-  #     Name: AppPipelineWebhook
-  #     Authentication: GITHUB_HMAC
-  #     AuthenticationConfiguration:
-  #       SecretToken: '{{resolve:secretsmanager:MyGitHubSecret:SecretString:token}}'
-  #     Filters:
-  #       - JsonPath: $.ref
-  #         MatchEquals: 'refs/heads/{GitHubBranch}'
-  #     TargetPipeline: !Ref GlueJobsCodePipeline
-  #     TargetAction: GitHubSourceAction
-  #     TargetPipelineVersion: !GetAtt 
-  #       - GlueJobsCodePipeline
-  #       - Version
-  #     RegisterWithThirdParty: true
-
   SsenseCloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -294,6 +275,24 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
+
+
+  AppPipelineWebhook:
+    Type: 'AWS::CodePipeline::Webhook'
+    Properties:
+      Name: AppPipelineWebhook
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: "{{resolve:secretsmanager:joey-ssense:SecretString:token}}"
+      Filters:
+        - JsonPath: $.ref
+          MatchEquals: 'refs/heads/{Branch}'
+      TargetPipeline: !Ref GlueJobsCodePipeline
+      TargetAction: GitHubSourceAction
+      TargetPipelineVersion: !GetAtt GlueJobsCodePipeline.Version
+      RegisterWithThirdParty: true
+
+
 
                 
 

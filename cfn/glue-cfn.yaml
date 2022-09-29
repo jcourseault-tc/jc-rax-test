@@ -67,13 +67,15 @@ Resources:
       Role: !Ref GlueJobRole
       Command:
         Name: glueetl
-        ScriptLocation: !Sub s3://${ArtifactsBucket}/${JobScriptKey}"
+        ScriptLocation: !Sub s3://${ArtifactsBucket}/${JobScriptKey}
       DefaultArguments:
         "--job-bookmark-option": "job-bookmark-enable"
         "--environment-type": !Ref EnvironmentType
       ExecutionProperty:
         MaxConcurrentRuns: 1
       MaxRetries: 0
+      WorkerType: Standard
+      MaxCapacity: 2
 
 
   
