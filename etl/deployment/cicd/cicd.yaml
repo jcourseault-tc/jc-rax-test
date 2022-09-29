@@ -18,7 +18,7 @@ Parameters:
   pPipelineArtifactsBucket:
     Type: String
     Description: Pipeline artifacts bucket name
-    Default: "joey-ssense-2"
+    Default: "aws-glue-assets-119428626494-us-west-2"
   Cloudwatchlogs:
     Description: 'cloud watch logs for code build in dev env'
     Type: String
