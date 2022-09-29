@@ -3,16 +3,16 @@ Description:
   This template sets up root stack for cicd ssense
 
 Resources:
-  Stacksns:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/sns.yaml
-  Stacks3:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/s3.yaml
-  Stackqueueu:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/queue.yaml
+#   Stacksns:
+#     Type: AWS::CloudFormation::Stack
+#     Properties:
+#       TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/sns.yaml
+#   Stacks3:
+#     Type: AWS::CloudFormation::Stack
+#     Properties:
+#       TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/s3.yaml
+#   Stackqueueu:
+#     Type: AWS::CloudFormation::Stack
+#     Properties:
+#       TemplateURL: https://s3.amazonaws.com/joey-ssense-2/ssense-codebuild-dev/queue.yaml
 
