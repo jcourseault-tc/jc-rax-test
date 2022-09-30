@@ -6,12 +6,11 @@ Parameters:
   EnvironmentType:
     Description: Environment Type
     Type: String
-    Default: 'dev'
+    Default: 'qa'
     AllowedValues:
       - dev
       - qa
       - prod
-
 
   ArtifactsBucket:
     Type: String
@@ -36,35 +35,20 @@ Parameters:
 
 
 
-  Cloudwatchlogs:
-    Description: 'cloud watch logs for code pipeline'
-    Type: String
-    Default: '/ssense/pipeline/*' 
-
-
 Resources:
 
-
-  DeploymentPipelineSNSTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub 'deployment-pipeline-${EnvironmentType}-topic'
-      Subscription:
-      - Endpoint: ahmad.haggag@rackspace.com
-        Protocol: email
-
-  # CodePipeline
-  GlueJobsCodePipeline: 
+  # Dev (QA) CodePipeline
+  SsenseDevCodePipeline: 
     Type: AWS::CodePipeline::Pipeline
     Properties: 
-      Name: !Sub DeployGlueJobsPipeline-${AWS::StackName}
+      Name: !Sub ssense-glue-etl-qa-pipeline-${AWS::StackName}
       RoleArn: !GetAtt SsenseCodePipelineRole.Arn
       ArtifactStore: 
         Type: S3
         Location: !Ref ArtifactsBucket
       Stages: 
       - 
-        Name: Source
+        Name: GitHubSource
         Actions: 
         - 
           Name: GitHubSourceAction
@@ -81,12 +65,13 @@ Resources:
               Branch: !Ref GitHubBranch
               PollForSourceChanges: false 
               OAuthToken: '{{resolve:secretsmanager:joey-ssense:SecretString:token}}'
+          Namespace: "SourceVariables"
           RunOrder: 1
       -
         Name: BuildGlueJobs
         Actions:
         -
-          Name: BuildGlueJobsStack
+          Name: BuildGlueJobsAction
           ActionTypeId:
             Category: Build
             Owner: AWS
@@ -98,6 +83,7 @@ Resources:
             - Name: BuildArtifacts
           Configuration:
             ProjectName: !Ref SsenseCodeBuild
+            EnvironmentVariables: "[{\"name\":\"Execution_ID\",\"value\":\"#{codepipeline.PipelineExecutionId}\",\"type\":\"PLAINTEXT\"},{\"name\":\"Branch_Name\",\"value\":\"#{SourceVariables.BranchName}\",\"type\":\"PLAINTEXT\"},{\"name\":\"Commit_ID\",\"value\":\"#{SourceVariables.CommitId}\",\"type\":\"PLAINTEXT\"}]"
           RunOrder: 2
 
       -
@@ -112,8 +98,9 @@ Resources:
              Provider: Manual
              Version: "1"
           Configuration:
-            NotificationArn: !Ref DeploymentPipelineSNSTopic
-            CustomData: "Please Provide Required Action for QA Deployment "
+            CustomData: "Please approve the following change 
+                         Commit message: #{SourceVariables.CommitMessage} 
+                         Commit Id  :  #{SourceVariables.CommitId}"
           RunOrder: 3
         -
           Name: QA_Deployment
@@ -129,39 +116,6 @@ Resources:
             StackName: !Sub ssense-glue-etl-qc-stack
             ParameterOverrides: !Sub  '{"EnvironmentType": "qa", "ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
             TemplatePath:  BuildArtifacts::build-output/glue-cfn.yaml
-            Capabilities: CAPABILITY_NAMED_IAM
-            RoleArn: !GetAtt SsenseCloudFormationRole.Arn
-          RunOrder: 4
-
-      -
-        Name: PROD_Deployment_Approval
-        Actions:
-        -
-          Name: PROD_Deployment_Approval
-          InputArtifacts: []
-          ActionTypeId:
-             Category: Approval
-             Owner: AWS
-             Provider: Manual
-             Version: "1"
-          Configuration:
-            NotificationArn: !Ref DeploymentPipelineSNSTopic
-            CustomData: "Please Provide Required Action for PROD Deployment "
-          RunOrder: 3
-        -
-          Name: PROD_Deployment
-          InputArtifacts:
-            - Name: BuildArtifacts
-          ActionTypeId:
-            Category: Deploy
-            Owner: AWS
-            Provider: "CloudFormation"
-            Version: '1'
-          Configuration:
-            ActionMode: CREATE_UPDATE
-            StackName: !Sub ssense-glue-etl-prod-stack
-            ParameterOverrides: !Sub  '{"EnvironmentType": "prod","ArtifactsBucket": "${ArtifactsBucket}" , "JobScriptKey" :"glue-scripts/etl-sample.py" }'
-            TemplatePath: BuildArtifacts::build-output/glue-cfn.yaml
             Capabilities: CAPABILITY_NAMED_IAM
             RoleArn: !GetAtt SsenseCloudFormationRole.Arn
           RunOrder: 4
@@ -277,19 +231,19 @@ Resources:
         - arn:aws:iam::aws:policy/AdministratorAccess
 
 
-  AppPipelineWebhook:
+  DevPipelineWebhook:
     Type: 'AWS::CodePipeline::Webhook'
     Properties:
-      Name: AppPipelineWebhook
+      Name: DevPipelineWebhook
       Authentication: GITHUB_HMAC
       AuthenticationConfiguration:
         SecretToken: "{{resolve:secretsmanager:joey-ssense:SecretString:token}}"
       Filters:
         - JsonPath: $.ref
           MatchEquals: 'refs/heads/{Branch}'
-      TargetPipeline: !Ref GlueJobsCodePipeline
+      TargetPipeline: !Ref SsenseDevCodePipeline
       TargetAction: GitHubSourceAction
-      TargetPipelineVersion: !GetAtt GlueJobsCodePipeline.Version
+      TargetPipelineVersion: !GetAtt SsenseDevCodePipeline.Version
       RegisterWithThirdParty: true
 
 
